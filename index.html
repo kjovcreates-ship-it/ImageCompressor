@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Photo Compressor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --mono: 'Space Mono', monospace;
+      --sans: 'Sora', sans-serif;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --accent: #c8f04c;
+      --tap-min: 44px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --surface2: #1f1f1f;
+      --border: #2a2a2a;
+      --border2: #383838;
+      --text: #f0ede8;
+      --muted: #777;
+      --accent-dim: #1e2a0a;
+      --img-bg: #111;
+      --webp-color: var(--accent);
+      --danger: #f06c6c;
+    }
+
+    [data-theme="light"] {
+      --bg: #f4f4f0;
+      --surface: #ffffff;
+      --surface2: #f0f0ec;
+      --border: #ddddd8;
+      --border2: #c8c8c2;
+      --text: #1a1a18;
+      --muted: #888;
+      --accent-dim: #eaf5cc;
+      --img-bg: #e8e8e4;
+      --webp-color: #4a7a00;
+      --danger: #d94f4f;
+    }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.25rem 0.875rem 6rem;
+      transition: background 0.2s, color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 860px;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    header h1 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      flex: 1;
+    }
+    header .badge {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 3px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+      display: none; /* hide on mobile to save space */
+    }
+    #themeBtn {
+      min-width: var(--tap-min);
+      min-height: var(--tap-min);
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 99px;
+      padding: 0 14px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      max-width: 860px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    /* ── Drop / Tap zone ── */
+    .drop-zone {
+      border: 1.5px dashed var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .drop-zone:active { background: var(--accent-dim); border-color: var(--accent); }
+    .drop-zone.over  { border-color: var(--accent); background: var(--accent-dim); }
+    .drop-zone .dz-icon { font-size: 2rem; margin-bottom: 10px; line-height: 1; }
+    .drop-zone .dz-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .drop-zone .dz-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); line-height: 1.6; }
+    .drop-zone .dz-desktop { display: none; }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+    /* ── Controls ── */
+    .ctrl-label {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
+    }
+
+    .quality-block { margin-bottom: 1.25rem; }
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    input[type=range] {
+      -webkit-appearance: none; appearance: none;
+      flex: 1; height: 6px;
+      background: var(--border2); border-radius: 99px;
+      outline: none; cursor: pointer;
+      touch-action: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--accent); cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 26px; height: 26px; border: none;
+      border-radius: 50%; background: var(--accent); cursor: pointer;
+    }
+
+    .quality-wrap { position: relative; display: flex; align-items: center; }
+    #qualityInput {
+      font-family: var(--mono); font-size: 18px; font-weight: 700;
+      color: var(--accent); background: var(--surface2);
+      border: 1px solid var(--border2); border-radius: var(--radius-sm);
+      width: 76px; padding: 8px 22px 8px 8px;
+      text-align: right; outline: none;
+      -moz-appearance: textfield;
+      min-height: var(--tap-min);
+    }
+    #qualityInput::-webkit-inner-spin-button,
+    #qualityInput::-webkit-outer-spin-button { -webkit-appearance: none; }
+    #qualityInput:focus { border-color: var(--accent); }
+    .quality-wrap .pct {
+      position: absolute; right: 7px;
+      font-family: var(--mono); font-size: 13px; font-weight: 700;
+      color: var(--accent); pointer-events: none;
+    }
+
+    /* Format buttons */
+    .format-block { margin-bottom: 0.5rem; }
+    .fmt-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fmt-btn {
+      min-height: var(--tap-min);
+      padding: 0 16px;
+      border-radius: 99px;
+      border: 1px solid var(--border2); background: transparent;
+      color: var(--muted); font-family: var(--mono); font-size: 12px;
+      font-weight: 700; letter-spacing: 0.05em; cursor: pointer;
+      transition: border-color 0.12s, color 0.12s, background 0.12s;
+      display: flex; align-items: center; gap: 5px;
+      -webkit-user-select: none; user-select: none;
+    }
+    .fmt-btn:active { opacity: 0.8; }
+    .fmt-btn.active { background: var(--accent); border-color: var(--accent); color: #0d0d0d; }
+    .webp-tag {
+      font-size: 9px; color: var(--webp-color); background: var(--accent-dim);
+      padding: 2px 5px; border-radius: 4px; letter-spacing: 0.04em; font-family: var(--mono);
+    }
+    .fmt-btn.active .webp-tag { background: rgba(0,0,0,0.15); color: #0d0d0d; }
+
+    /* ── Work area ── */
+    #workArea { display: none; margin-top: 1rem; }
+
+    /* Summary bar */
+    .summary-bar {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-bottom: 1rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 16px;
+      align-items: center;
+    }
+    .count-label { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+    .count-label strong { color: var(--text); font-size: 16px; }
+    .summary-stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .s-stat { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .s-stat span { color: var(--text); font-weight: 700; }
+
+    /* Image grid */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .img-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      position: relative;
+    }
+    .img-card img {
+      width: 100%; height: 120px;
+      object-fit: cover;
+      background: var(--img-bg);
+      display: block;
+    }
+
+    /* Remove btn — always visible on mobile */
+    .img-card .remove-btn {
+      position: absolute;
+      top: 6px; right: 6px;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.65);
+      border: none; color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    .img-card .remove-btn:active { transform: scale(0.9); }
+
+    .img-card .card-info { padding: 8px 10px; border-top: 1px solid var(--border); }
+    .img-card .card-name {
+      font-size: 11px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+    .img-card .card-sizes {
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px;
+    }
+    .img-card .card-sizes .saved { color: var(--accent); }
+    .img-card .card-sizes .increased { color: var(--danger); }
+
+    /* Download single button on card */
+    .img-card .dl-single {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      background: transparent;
+      border: none;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      text-align: center;
+      cursor: pointer;
+      min-height: 36px;
+      transition: background 0.12s, color 0.12s;
+    }
+    .img-card .dl-single:active { background: var(--accent-dim); color: var(--accent); }
+
+    /* Processing */
+    .img-card.processing img { opacity: 0.4; }
+    .img-card .spinner {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -70%);
+      width: 24px; height: 24px;
+      border: 2.5px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .img-card.processing .spinner { display: block; }
+    @keyframes spin { to { transform: translate(-50%, -70%) rotate(360deg); } }
+
+    /* Add more tile */
+    .add-more-card {
+      background: transparent;
+      border: 1.5px dashed var(--border2);
+      border-radius: var(--radius-sm);
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: var(--mono);
+      -webkit-user-select: none; user-select: none;
+    }
+    .add-more-card:active { border-color: var(--accent); color: var(--accent); }
+    .add-more-card .plus { font-size: 1.6rem; line-height: 1; }
+
+    /* Action buttons */
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 1rem;
+    }
+    .btn-primary {
+      min-height: var(--tap-min);
+      padding: 0 16px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn-primary:active { background: var(--accent); color: #0d0d0d; }
+    .btn-primary:disabled { border-color: var(--border2); color: var(--muted); cursor: default; background: transparent; }
+
+    .btn-secondary {
+      min-height: var(--tap-min);
+      padding: 0 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn-secondary:active { color: var(--text); }
+
+    /* ── Desktop upgrades ── */
+    @media (min-width: 600px) {
+      body { padding: 2.5rem 1rem 5rem; }
+      header h1 { font-size: 1.4rem; }
+      header .badge { display: inline-block; }
+      .card { padding: 2rem; }
+      .drop-zone { padding: 3rem 1rem; }
+      .drop-zone .dz-desktop { display: inline; }
+      .drop-zone .dz-mobile { display: none; }
+      .img-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+      .img-card img { height: 140px; }
+      .add-more-card { min-height: 190px; }
+      .img-card .remove-btn { opacity: 0; transition: opacity 0.15s; width: 24px; height: 24px; font-size: 12px; }
+      .img-card:hover .remove-btn { opacity: 1; }
+      .controls-row { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: start; }
+      .summary-bar { display: flex; justify-content: space-between; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Photo Compressor and Converter</h1>
+    <span class="badge">Khim Joven</span>
+    <button id="themeBtn">
+      <span id="themeIcon">☀️</span>
+      <span id="themeLabel">Light</span>
+    </button>
+  </header>
+
+  <div class="card">
+
+    <!-- Tap / Drop zone -->
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="dz-icon">📷</div>
+      <p class="dz-title">Tap to choose photos</p>
+      <p class="dz-sub">
+        <span class="dz-mobile">Pick from your gallery or camera &middot; multiple OK</span>
+        <span class="dz-desktop">Drop images here or click to browse &middot; select multiple</span>
+      </p>
+      <p class="dz-sub" style="margin-top:4px;">JPG &middot; PNG &middot; WebP</p>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
+    </div>
+
+    <!-- Controls -->
+    <hr class="divider" />
+    <div class="controls-row">
+      <div class="quality-block">
+        <div class="ctrl-label">Quality</div>
+        <div class="slider-row">
+          <input type="range" id="qualitySlider" min="1" max="100" value="70" step="1" />
+          <div class="quality-wrap">
+            <input type="number" id="qualityInput" min="1" max="100" value="70" inputmode="numeric" />
+            <span class="pct">%</span>
+          </div>
+        </div>
+      </div>
+      <div class="format-block">
+        <div class="ctrl-label">Output Format</div>
+        <div class="fmt-group">
+          <button class="fmt-btn active" data-fmt="image/jpeg" data-ext="jpg">JPG</button>
+          <button class="fmt-btn" data-fmt="image/png" data-ext="png">PNG</button>
+          <button class="fmt-btn" data-fmt="image/webp" data-ext="webp">WebP <span class="webp-tag">SMALLER</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work area -->
+    <div id="workArea">
+      <hr class="divider" />
+
+      <div class="summary-bar">
+        <div class="count-label"><strong id="imgCount">0</strong> images</div>
+        <div class="summary-stats">
+          <div class="s-stat">Before: <span id="totalOrig">—</span></div>
+          <div class="s-stat">After: <span id="totalComp">—</span></div>
+          <div class="s-stat">Saved: <span id="totalSaved">—</span></div>
+        </div>
+      </div>
+
+      <div class="img-grid" id="imgGrid">
+        <div class="add-more-card" id="addMoreBtn" onclick="document.getElementById('fileInput').click()">
+          <span class="plus">+</span>
+          <span>Add more</span>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-primary" id="dlAllBtn" disabled>&#8659; Download All</button>
+        <button class="btn-secondary" id="clearBtn">&#x2715; Clear All</button>
+      </div>
+    </div>
+
+  </div>
+
+  <canvas id="canvas" style="display:none"></canvas>
+
+  <script>
+    // ── Theme ──
+    const html = document.documentElement;
+    const themeBtn   = document.getElementById('themeBtn');
+    const themeIcon  = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    const savedTheme = localStorage.getItem('pc-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+
+    function setTheme(t) {
+      html.setAttribute('data-theme', t);
+      themeIcon.textContent  = t === 'dark' ? '☀️' : '🌙';
+      themeLabel.textContent = t === 'dark' ? 'Light' : 'Dark';
+      localStorage.setItem('pc-theme', t);
+    }
+    themeBtn.addEventListener('click', () =>
+      setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+
+    // ── App ──
+    const fileInput     = document.getElementById('fileInput');
+    const dropZone      = document.getElementById('dropZone');
+    const workArea      = document.getElementById('workArea');
+    const imgGrid       = document.getElementById('imgGrid');
+    const addMoreBtn    = document.getElementById('addMoreBtn');
+    const qualitySlider = document.getElementById('qualitySlider');
+    const qualityInput  = document.getElementById('qualityInput');
+    const dlAllBtn      = document.getElementById('dlAllBtn');
+    const clearBtn      = document.getElementById('clearBtn');
+    const canvas        = document.getElementById('canvas');
+    const ctx           = canvas.getContext('2d');
+    const imgCountEl    = document.getElementById('imgCount');
+    const totalOrigEl   = document.getElementById('totalOrig');
+    const totalCompEl   = document.getElementById('totalComp');
+    const totalSavedEl  = document.getElementById('totalSaved');
+
+    let images       = [];
+    let selectedMime = 'image/jpeg';
+    let selectedExt  = 'jpg';
+    let idCounter    = 0;
+
+    // Quality sync
+    qualitySlider.addEventListener('input', () => {
+      qualityInput.value = qualitySlider.value;
+      recompressAll();
+    });
+    qualityInput.addEventListener('input', () => {
+      let v = parseInt(qualityInput.value);
+      if (isNaN(v)) return;
+      v = Math.min(100, Math.max(1, v));
+      qualitySlider.value = v;
+      recompressAll();
+    });
+    qualityInput.addEventListener('blur', () => {
+      let v = parseInt(qualityInput.value);
+      if (isNaN(v) || v < 1) v = 1;
+      if (v > 100) v = 100;
+      qualityInput.value = v;
+      qualitySlider.value = v;
+      recompressAll();
+    });
+
+    // Format buttons
+    document.querySelectorAll('.fmt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedMime = btn.dataset.fmt;
+        selectedExt  = btn.dataset.ext;
+        recompressAll();
+      });
+    });
+
+    // File input
+    fileInput.addEventListener('change', e => {
+      addFiles(Array.from(e.target.files));
+      fileInput.value = '';
+    });
+
+    // Drag-and-drop (desktop)
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('over');
+      addFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+    });
+
+    function fmtSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    function addFiles(files) {
+      const valid = files.filter(f => f.type.startsWith('image/'));
+      if (!valid.length) return;
+      workArea.style.display = 'block';
+
+      valid.forEach(file => {
+        const id = ++idCounter;
+        const reader = new FileReader();
+        reader.onload = e => {
+          const entry = { id, file, origSize: file.size, origDataUrl: e.target.result, compDataUrl: null, compSize: 0, card: null };
+          images.push(entry);
+          const card = buildCard(entry);
+          entry.card = card;
+          imgGrid.insertBefore(card, addMoreBtn);
+          compressEntry(entry).then(updateSummary);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function buildCard(entry) {
+      const card = document.createElement('div');
+      card.className = 'img-card processing';
+
+      const img = document.createElement('img');
+      img.src = entry.origDataUrl;
+      img.alt = entry.file.name;
+
+      const spinner = document.createElement('div');
+      spinner.className = 'spinner';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.setAttribute('aria-label', 'Remove image');
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', e => { e.stopPropagation(); removeEntry(entry.id); });
+
+      const info = document.createElement('div');
+      info.className = 'card-info';
+
+      const name = document.createElement('div');
+      name.className = 'card-name';
+      name.title = entry.file.name;
+      name.textContent = entry.file.name;
+
+      const sizes = document.createElement('div');
+      sizes.className = 'card-sizes';
+      sizes.innerHTML = `<span>${fmtSize(entry.origSize)}</span><span class="comp-size muted">—</span>`;
+
+      info.appendChild(name);
+      info.appendChild(sizes);
+
+      // Per-card download button (mobile friendly)
+      const dlSingle = document.createElement('button');
+      dlSingle.className = 'dl-single';
+      dlSingle.textContent = '↙ Download this';
+      dlSingle.disabled = true;
+      dlSingle.addEventListener('click', () => {
+        if (!entry.compDataUrl) return;
+        triggerDownload(entry);
+      });
+
+      card.appendChild(img);
+      card.appendChild(spinner);
+      card.appendChild(removeBtn);
+      card.appendChild(info);
+      card.appendChild(dlSingle);
+
+      return card;
+    }
+
+    function compressEntry(entry) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const q = parseInt(qualitySlider.value) / 100;
+          canvas.width  = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+
+          const dataUrl  = canvas.toDataURL(selectedMime, q);
+          const compBytes = Math.round((dataUrl.split(',')[1].length * 3) / 4);
+          entry.compDataUrl = dataUrl;
+          entry.compSize    = compBytes;
+
+          if (entry.card) {
+            entry.card.classList.remove('processing');
+            entry.card.querySelector('img').src = dataUrl;
+
+            const pct  = Math.round((1 - compBytes / entry.origSize) * 100);
+            const cls  = pct >= 0 ? 'saved' : 'increased';
+            const sign = pct >= 0 ? '-' : '+';
+            entry.card.querySelector('.card-sizes').innerHTML =
+              `<span>${fmtSize(entry.origSize)}</span><span class="${cls}">${sign}${Math.abs(pct)}% · ${fmtSize(compBytes)}</span>`;
+
+            const dlBtn = entry.card.querySelector('.dl-single');
+            dlBtn.disabled = false;
+          }
+
+          dlAllBtn.disabled = false;
+          resolve();
+        };
+        img.src = entry.origDataUrl;
+      });
+    }
+
+    function recompressAll() {
+      if (!images.length) return;
+      images.forEach(e => { if (e.card) e.card.classList.add('processing'); });
+      Promise.all(images.map(compressEntry)).then(updateSummary);
+    }
+
+    function removeEntry(id) {
+      const idx = images.findIndex(e => e.id === id);
+      if (idx === -1) return;
+      images[idx].card?.remove();
+      images.splice(idx, 1);
+      updateSummary();
+      if (!images.length) {
+        workArea.style.display = 'none';
+        dlAllBtn.disabled = true;
+      }
+    }
+
+    function updateSummary() {
+      const count = images.length;
+      imgCountEl.textContent = count;
+      if (!count) return;
+      const totalOrig = images.reduce((s, e) => s + e.origSize, 0);
+      const totalComp = images.reduce((s, e) => s + e.compSize, 0);
+      const pct = Math.round((1 - totalComp / totalOrig) * 100);
+      totalOrigEl.textContent  = fmtSize(totalOrig);
+      totalCompEl.textContent  = fmtSize(totalComp);
+      totalSavedEl.textContent = (pct >= 0 ? '-' : '+') + Math.abs(pct) + '%';
+      totalSavedEl.style.color = pct >= 0 ? 'var(--accent)' : 'var(--danger)';
+    }
+
+    function triggerDownload(entry) {
+      const baseName = entry.file.name.replace(/\.[^.]+$/, '');
+      const a = document.createElement('a');
+      a.href     = entry.compDataUrl;
+      a.download = baseName + '_q' + qualitySlider.value + '.' + selectedExt;
+      a.click();
+    }
+
+    // Download all with staggered delay
+    dlAllBtn.addEventListener('click', async () => {
+      const ready = images.filter(e => e.compDataUrl);
+      if (!ready.length) return;
+      dlAllBtn.disabled = true;
+      dlAllBtn.textContent = '⏳ Downloading…';
+      for (let i = 0; i < ready.length; i++) {
+        triggerDownload(ready[i]);
+        await new Promise(r => setTimeout(r, 250));
+      }
+      dlAllBtn.textContent = '↙ Download All';
+      dlAllBtn.disabled = false;
+    });
+
+    // Clear all
+    clearBtn.addEventListener('click', () => {
+      images.forEach(e => e.card?.remove());
+      images = [];
+      workArea.style.display = 'none';
+      dlAllBtn.disabled = true;
+      dlAllBtn.textContent = '↙ Download All';
+    });
+  </script>
+
+</body>
+</html>
